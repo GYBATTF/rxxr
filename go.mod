@@ -1,4 +1,4 @@
-module rxxr
+module github.com/dogggonit/rxxr
 
 go 1.18
 
