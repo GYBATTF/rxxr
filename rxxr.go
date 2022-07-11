@@ -13,12 +13,16 @@ type (
 		Subscribed() bool
 	}
 
-	// Pipe is a type that can publish values to subscribers
-	Pipe[T any] interface {
+	Subscribable[T any] interface {
 		// Subscribe registers a function to receive values from this pipe
 		Subscribe(func(T)) Subscription
 		// Unsubscribe unregisters a function from receiving values
 		Unsubscribe(Subscription)
+	}
+
+	// Pipe is a type that can publish values to subscribers
+	Pipe[T any] interface {
+		Subscribable[T]
 		// Publish publishes values to a pipe
 		Publish(v ...T)
 		// Close closes the pipe and unsubscribes all subscribers
