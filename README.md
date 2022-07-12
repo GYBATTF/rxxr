@@ -3,23 +3,27 @@
 Allows values to be published and subscribed to.
 Subscribers will receive the most recently published value, if one exists.
 
-### Constructors
+### Constructor
 
 ```go
-pipe := rxxr.New[int]()
-pipe.Subscribe(func (i int) {
-	// Will not run until a value is published
-})
+// Provide nil as config for defaults
+pipe := rxxr.New[int](nil)
 ```
 
-```go
-pipe := rxxr.With[int](42)
-pipe.Subscribe(func (i int) {
-    // Will immediately run with initial value
-	fmt.Println(42)
-})
+### Configure
 
-// 42
+```go
+cfg := &rxxr.Config[int]{}
+// Create a pipe already containing a value
+cfg.SetInitialValue(42)
+// When a function is subscribed, 
+// call it with the current value if one exists.
+cfg.SendOnSubscribe(true)
+
+// To use the config:
+pipe := rxxr.New[int](cfg)
+// or
+pipe := cfg.Build()
 ```
 
 ### Subscribe

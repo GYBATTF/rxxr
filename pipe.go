@@ -7,6 +7,8 @@ import (
 
 type (
 	pipe[T any] struct {
+		cfg Config[T]
+
 		value       T
 		isSet       bool
 		valueChange chan T
@@ -22,19 +24,23 @@ type (
 	}
 )
 
-// With creates a new pipe already containing a value
-func With[T any](initial T) Pipe[T] {
-	val := New[T]().(*pipe[T])
-	val.setValue(initial)
-	return val
-}
-
 // New creates a simple pipe that transmits received values to all subscribers
-func New[T any]() Pipe[T] {
+func New[T any](cfg *Config[T]) Pipe[T] {
+	if cfg == nil {
+		cfg = &Config[T]{}
+	}
+
 	v := &pipe[T]{
+		cfg:           *cfg,
 		valueChange:   make(chan T),
 		subscriptions: map[uuid.UUID]*subscription[T]{},
 	}
+
+	if cfg.initialValueSet {
+		v.value = cfg.initialValue
+		v.isSet = true
+	}
+
 	go v.watchForValueChange()
 	return v
 }
@@ -87,7 +93,7 @@ func (val *pipe[T]) Subscribe(fn func(T)) Subscription {
 	}
 
 	s := newSubscription[T](fn)
-	if v, ok := val.Value(); ok {
+	if v, ok := val.Value(); val.cfg.sendOnSubscribe && ok {
 		s.pipe <- v
 	}
 
@@ -166,4 +172,32 @@ func (s *subscription[T]) GetID() uuid.UUID {
 
 func (s *subscription[T]) Subscribed() bool {
 	return s.subscribed
+}
+
+// Config is used to configure a pipe.
+// Can either be used as a parameter to New or on its own as a builder.
+type Config[T any] struct {
+	initialValue    T
+	initialValueSet bool
+
+	sendOnSubscribe bool
+}
+
+// Build creates a new pipe with this config.
+func (c *Config[T]) Build() Pipe[T] {
+	return New[T](c)
+}
+
+// SetInitialValue Initializes a pipe with the provided value.
+func (c *Config[T]) SetInitialValue(v T) *Config[T] {
+	c.initialValueSet = true
+	c.initialValue = v
+	return c
+}
+
+// SendOnSubscribe sets if the current value should be sent to new subscribers,
+// if a value is not sent the subscriber will receive no values.
+func (c *Config[T]) SendOnSubscribe(b bool) *Config[T] {
+	c.sendOnSubscribe = b
+	return c
 }
