@@ -1,7 +1,6 @@
 package rxxr
 
 import (
-	"math"
 	"math/rand"
 	"testing"
 	"time"
@@ -14,29 +13,38 @@ func TestPipe(t *testing.T) {
 }
 
 func TestNew(t *testing.T) {
-	p := New[any]()
-	if p == nil {
-		t.Fail()
-	} else {
-		p.Close()
-	}
-}
+	t.Run("new with nil config", func(t *testing.T) {
+		p := New[any](nil)
+		if p == nil {
+			t.Fail()
+		} else {
+			p.Close()
+		}
+	})
 
-func TestWith(t *testing.T) {
-	i := math.Max(rand.Float64(), 1)
-	p := With[float64](i)
-	if p == nil {
-		t.FailNow()
-	}
-	defer p.Close()
+	t.Run("new with config", func(t *testing.T) {
+		p := New[any](&Config[any]{})
+		if p == nil {
+			t.Fail()
+		} else {
+			p.Close()
+		}
+	})
 
-	if v, _ := p.Value(); v != i {
-		t.Fail()
-	}
+	t.Run("config build method", func(t *testing.T) {
+		p := (&Config[any]{}).Build()
+		if p == nil {
+			t.Fail()
+		} else {
+			p.Close()
+		}
+	})
 }
 
 func Test_value_Close(t *testing.T) {
-	p := New[any]()
+	passDelay := 5 * time.Second
+
+	p := New[any](nil)
 	c := make(chan int)
 	defer close(c)
 	p.Subscribe(func(any) {
@@ -48,12 +56,12 @@ func Test_value_Close(t *testing.T) {
 	select {
 	case <-c:
 		t.Fail()
-	case <-time.After(5 * time.Second):
+	case <-time.After(passDelay):
 	}
 }
 
 func Test_value_Publish(t *testing.T) {
-	p := New[int]()
+	p := New[int](nil)
 
 	i := rand.Int()
 	received := make(chan bool)
@@ -79,16 +87,18 @@ func Test_value_Publish(t *testing.T) {
 }
 
 func Test_value_Subscribe(t *testing.T) {
-	p := New[any]()
+	p := New[any](nil)
 	defer p.Close()
 	s := p.Subscribe(func(any) {})
-	if !s.Subscribed() {
+	if s == nil {
+		t.Fail()
+	} else if !s.Subscribed() {
 		t.Fail()
 	}
 }
 
 func Test_value_Unsubscribe(t *testing.T) {
-	p := New[any]()
+	p := New[any](nil)
 	defer p.Close()
 	s := p.Subscribe(func(any) {})
 	p.Unsubscribe(s)
@@ -99,7 +109,7 @@ func Test_value_Unsubscribe(t *testing.T) {
 
 func Test_value_Value(t *testing.T) {
 	t.Run("no value", func(t *testing.T) {
-		p := New[any]()
+		p := New[any](nil)
 		defer p.Close()
 		if _, ok := p.Value(); ok {
 			t.Fail()
@@ -108,7 +118,7 @@ func Test_value_Value(t *testing.T) {
 
 	t.Run("has value", func(t *testing.T) {
 		i := rand.Int()
-		p := With[int](i)
+		p := New[int](new(Config[int]).SetInitialValue(i))
 		defer p.Close()
 		if v, ok := p.Value(); !ok {
 			t.Fail()
