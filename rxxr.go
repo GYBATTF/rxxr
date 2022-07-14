@@ -20,11 +20,15 @@ type (
 		Unsubscribe(Subscription)
 	}
 
+	Publishable[T any] interface {
+		// Publish publishes values to a pipe
+		Publish(v ...T)
+	}
+
 	// Pipe is a type that can publish values to subscribers
 	Pipe[T any] interface {
 		Subscribable[T]
-		// Publish publishes values to a pipe
-		Publish(v ...T)
+		Publishable[T]
 		// Close closes the pipe and unsubscribes all subscribers
 		Close()
 		// Value returns the currently stored value, and if one exists
